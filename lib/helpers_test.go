@@ -1,4 +1,4 @@
-package gin_test
+package sparkplug_test
 
 import (
 	"reflect"

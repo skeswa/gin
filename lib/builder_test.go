@@ -1,4 +1,4 @@
-package gin_test
+package sparkplug_test
 
 import (
 	"github.com/codegangsta/gin/lib"

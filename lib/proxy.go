@@ -1,21 +1,29 @@
-package gin
+package sparkplug
 
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 )
 
+var (
+	proxyErrorLogger = log.New(os.Stdout, "⚡  [ERR]", 0)
+)
+
 type Proxy struct {
-	listener net.Listener
-	proxy    *httputil.ReverseProxy
-	builder  Builder
-	runner   Runner
-	to       *url.URL
+	rebuilder func()
+	listener  net.Listener
+	endpoint  string
+	proxy     *httputil.ReverseProxy
+	builder   Builder
+	runner    Runner
+	to        *url.URL
 }
 
 func NewProxy(builder Builder, runner Runner) *Proxy {
@@ -25,13 +33,14 @@ func NewProxy(builder Builder, runner Runner) *Proxy {
 	}
 }
 
-func (p *Proxy) Run(config *Config) error {
-
+func (p *Proxy) Run(config *Config, rebuilder func()) error {
 	// create our reverse proxy
 	url, err := url.Parse(config.ProxyTo)
 	if err != nil {
 		return err
 	}
+	p.rebuilder = rebuilder
+	p.endpoint = normalizeEndpoint(config.Endpoint)
 	p.proxy = httputil.NewSingleHostReverseProxy(url)
 	p.to = url
 
@@ -57,6 +66,10 @@ func (p *Proxy) defaultHandler(res http.ResponseWriter, req *http.Request) {
 		if strings.ToLower(req.Header.Get("Upgrade")) == "websocket" || strings.ToLower(req.Header.Get("Accept")) == "text/event-stream" {
 			proxyWebsocket(res, req, p.to)
 		} else {
+			if req.URL.Path == p.endpoint {
+				// Invoke the rebuilder to restart the web server.
+				p.rebuilder()
+			}
 			p.proxy.ServeHTTP(res, req)
 		}
 	}
@@ -66,7 +79,7 @@ func proxyWebsocket(w http.ResponseWriter, r *http.Request, host *url.URL) {
 	d, err := net.Dial("tcp", host.Host)
 	if err != nil {
 		http.Error(w, "Error contacting backend server.", 500)
-		fmt.Errorf("Error dialing websocket backend %s: %v", host, err)
+		proxyErrorLogger.Printf("Error dialing websocket backend %s: %v", host, err)
 		return
 	}
 	hj, ok := w.(http.Hijacker)
@@ -76,7 +89,7 @@ func proxyWebsocket(w http.ResponseWriter, r *http.Request, host *url.URL) {
 	}
 	nc, _, err := hj.Hijack()
 	if err != nil {
-		fmt.Errorf("Hijack error: %v", err)
+		proxyErrorLogger.Printf("Hijack error: %v", err)
 		return
 	}
 	defer nc.Close()
@@ -84,7 +97,7 @@ func proxyWebsocket(w http.ResponseWriter, r *http.Request, host *url.URL) {
 
 	err = r.Write(d)
 	if err != nil {
-		fmt.Errorf("Error copying request to target: %v", err)
+		proxyErrorLogger.Printf("Error copying request to target: %v", err)
 		return
 	}
 
@@ -96,4 +109,12 @@ func proxyWebsocket(w http.ResponseWriter, r *http.Request, host *url.URL) {
 	go cp(d, nc)
 	go cp(nc, d)
 	<-errc
+}
+
+func normalizeEndpoint(endpoint string) string {
+	if endpoint[0] != '/' {
+		return "/" + endpoint
+	}
+
+	return endpoint
 }
