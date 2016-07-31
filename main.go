@@ -100,6 +100,9 @@ func mainAction(c *cli.Context) error {
 	}
 
 	err = proxy.Run(config, func() {
+		fmt.Println()
+		logger.Println("restarting web server...")
+		fmt.Println()
 		runner.Kill()
 		build(builder, runner, logger)
 	})
@@ -108,13 +111,15 @@ func mainAction(c *cli.Context) error {
 		logger.Fatal(err)
 	}
 
-	logger.Printf("listening on port %d\n", port)
+	logger.Printf("listening on port %d\n\n", port)
 
-	shutdown(runner)
-
-	// build right now
+	// Perform the initial build at the inception of the cli.
 	build(builder, runner, logger)
 
+	// Keep sparkplug running until it need not any longer.
+	blockUntilExit(runner)
+
+	// This action will never error via cli.
 	return nil
 }
 
@@ -138,16 +143,17 @@ func build(builder sparkplug.Builder, runner sparkplug.Runner, logger *log.Logge
 	time.Sleep(100 * time.Millisecond)
 }
 
-func shutdown(runner sparkplug.Runner) {
+func blockUntilExit(runner sparkplug.Runner) {
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		s := <-c
-		logger.Println("Got signal: ", s)
-		err := runner.Kill()
-		if err != nil {
-			logger.Print("Error killing: ", err)
-		}
-		os.Exit(1)
-	}()
+
+	// Block until the there is a SIGTERM.
+	<-c
+	fmt.Println()
+	logger.Println("Received termination interrupt; exiting.")
+	err := runner.Kill()
+	if err != nil {
+		logger.Print("Error killing: ", err)
+	}
+	os.Exit(1)
 }
