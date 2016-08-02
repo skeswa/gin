@@ -1,7 +1,7 @@
 ⚡ sparkplug
 ========
 
-`sparkplug`, like its predecessor [`gin`](https://github.com/codegangsta/gin), is a simple command line utility for restarting your Go server in a development setting. The key difference is that, instead of watching the filesystem for changes, `sparkplug` exposes an HTTP endpoint that restarts your server. Though more manual, `sparkplug` gives you more control and is usable in more constrained scenario.
+`sparkplug`, like its predecessor [`gin`](https://github.com/codegangsta/gin), is a simple command line utility for restarting your Go server in a development setting. `sparkplug` improves upon gin by using [filesystem notifications](), and an HTTP endpoint to perform restarts.
 
 Like `gin`, `sparkplug` adheres to the "silence is golden" principle, so it will only complain 
 if there was a compiler error or if you succesfully compile after an error.
