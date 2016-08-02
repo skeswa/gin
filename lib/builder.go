@@ -53,11 +53,10 @@ func (b *builder) Build() error {
 	command.Dir = b.dir
 
 	output, err := command.CombinedOutput()
-
-	if command.ProcessState.Success() {
-		b.errors = ""
-	} else {
+	if err != nil || !command.ProcessState.Success() {
 		b.errors = string(output)
+	} else {
+		b.errors = ""
 	}
 
 	if len(b.errors) > 0 {
