@@ -186,9 +186,14 @@ func createWatcher(path string, binary string, rebuilder func()) *fsnotify.Watch
 
 	// Watch indefinitely for watcher events.
 	go func() {
+		// In some situations, a temp file will be created during the build process.
+		// That file follows this naming pattern, and must be ignored.
+		umaskBinary := binary + "-go-tmp-umask"
+
 		for event := range watcher.Events {
 			// Ignore events on generated sparkplug binaries.
 			if !strings.HasSuffix(event.Name, binary) &&
+				!strings.HasSuffix(event.Name, umaskBinary) &&
 				(event.Op&fsnotify.Write == fsnotify.Write ||
 					event.Op&fsnotify.Rename == fsnotify.Rename ||
 					event.Op&fsnotify.Create == fsnotify.Create ||
