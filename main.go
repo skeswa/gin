@@ -193,11 +193,7 @@ func createWatcher(path string, binary string, rebuilder func()) *fsnotify.Watch
 		for event := range watcher.Events {
 			// Ignore events on generated sparkplug binaries.
 			if !strings.HasSuffix(event.Name, binary) &&
-				!strings.HasSuffix(event.Name, umaskBinary) &&
-				(event.Op&fsnotify.Write == fsnotify.Write ||
-					event.Op&fsnotify.Rename == fsnotify.Rename ||
-					event.Op&fsnotify.Create == fsnotify.Create ||
-					event.Op&fsnotify.Remove == fsnotify.Remove) {
+				!strings.HasSuffix(event.Name, umaskBinary) {
 				// Restart the build process whenever a file is written, changed or
 				// removed.
 				rebuilder()
