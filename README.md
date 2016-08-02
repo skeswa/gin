@@ -21,6 +21,15 @@ Then verify that `sparkplug` was installed correctly:
 sparkplug -h
 ```
 
+## Usage
+
+In your terminal, navigate to the source directory of your web server, then execute:
+```shell
+sparkplug
+```
+Once compiled, your server will then be exposed on port 3000 or the specified by the `PORT` environment variable.  
+The server may be restarted by changing any source file, or by requesting the [/restart](http://localhost:3000) HTTP endpoint (this endpoint is configurable).
+
 ## Supporting Sparkplug in Your Web app
 `sparkplug` assumes that your web app binds itself to the `PORT` environment 
 variable so it can properly proxy requests to your app. Web frameworks 
