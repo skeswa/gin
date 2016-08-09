@@ -196,7 +196,10 @@ func createWatcher(path string, binary string, rebuilder func()) *fsnotify.Watch
 				!strings.HasSuffix(event.Name, umaskBinary) {
 				// Restart the build process whenever a file is written, changed or
 				// removed.
+				logger.Printf(`File "%s" changed.\n`, event.Name)
 				rebuilder()
+			} else {
+				logger.Printf(`Filesystem event "%v" ignored.\n`, event.Name)
 			}
 		}
 	}()
